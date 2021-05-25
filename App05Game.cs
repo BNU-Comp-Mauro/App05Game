@@ -95,7 +95,7 @@ namespace App05MonoGame
             // Load Music and SoundEffects
 
             SoundController.LoadContent(Content);
-            SoundController.PlaySong("Adventure");
+            ///MUSICSoundController.PlaySong("Adventure");
             flameEffect = SoundController.GetSoundEffect("Flame");
 
             // Load Fonts
@@ -343,8 +343,8 @@ namespace App05MonoGame
         {
             int margin = 20;
 
-            string names = "Derek & Andrei";
-            string app = "App05: MonogGame";
+            string names = "Mauro Nunes";
+            string app = "App05: MonoGame";
             string module = "BNU CO453-2020";
 
             Vector2 namesSize = calibriFont.MeasureString(names);
