@@ -28,6 +28,9 @@ namespace App05MonoGame.Controllers
             timer = maxTime;
         }
 
+        /// <summary>
+        /// Creates the enemy sprite, giving it a walking direction, starting position, and speed.
+        /// </summary>
         public AnimatedSprite CreateEnemy(GraphicsDevice graphics,
             Texture2D enemySheet)
         {

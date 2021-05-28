@@ -231,6 +231,13 @@ namespace App05MonoGame
             {
                 gameState = GameState.WON;
                 enemyController.RemoveEnemy();
+                playerController.RemovePlayer();
+            }
+            else if (playerSprite.HasCollided(enemySprite))
+            {
+                gameState = GameState.LOST;
+                enemyController.RemoveEnemy();
+                playerController.RemovePlayer();
             }
             base.Update(gameTime);
         }
@@ -295,7 +302,7 @@ namespace App05MonoGame
         {
             int margin = 20;
 
-            string names = "Derek & Andrei. Modified by Mauro";
+            string names = "Modified by Mauro";
             string app = "App05: RPG Game";
             string module = "BNU CO453-2020";
 
@@ -306,14 +313,14 @@ namespace App05MonoGame
             Vector2 bottomLeft = new Vector2(margin, HD_Height - margin);
             Vector2 bottomRight = new Vector2(HD_Width - appSize.X - margin, HD_Height - margin);
 
-            spriteBatch.DrawString(calibriFont, names, bottomCentre, Color.Yellow);
-            spriteBatch.DrawString(calibriFont, module, bottomLeft, Color.Yellow);
-            spriteBatch.DrawString(calibriFont, app, bottomRight, Color.Yellow);
+            spriteBatch.DrawString(calibriFont, names, bottomCentre, Color.White);
+            spriteBatch.DrawString(calibriFont, module, bottomLeft, Color.White);
+            spriteBatch.DrawString(calibriFont, app, bottomRight, Color.White);
         }
 
         /// <summary>
-        /// Display a congratulatory message to the player saying
-        /// that they've won the game (score is over 800) and
+        /// Display a message to the player saying
+        /// that they've won the game (score is 800) and
         /// end.
         /// </summary>
         public void DrawGameWinMessage(SpriteBatch spriteBatch)
@@ -335,12 +342,12 @@ namespace App05MonoGame
 
         /// <summary>
         /// Display a message to the player saying that they've lost
-        /// the game (health has dropped to 0) and end.
+        /// the game (collided with enemy sprite).
         /// </summary>
         public void DrawGameLoseMessage(SpriteBatch spriteBatch)
         {
-            string loseMsg = "You have lost the game. Better luck next time!";
-            string exit = "Press the ESC key to exit the game.";
+            string loseMsg = "Game Over!";
+            string exit = "Press ESC to exit.";
 
             Vector2 loseMsgSize = arialFont.MeasureString(loseMsg);
             Vector2 exitSize = arialFont.MeasureString(exit);

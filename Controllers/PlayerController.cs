@@ -47,6 +47,12 @@ namespace App05MonoGame.Controllers
             StartPlayer();
             return Player;
         }
+        public void RemovePlayer()
+        {
+            Player.IsActive = false;
+            Player.IsAlive = false;
+            Player.IsVisible = false;
+        }
 
         public void StartPlayer()
         {
