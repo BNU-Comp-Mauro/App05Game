@@ -18,6 +18,14 @@ namespace App05MonoGame
     /// <authors>
     /// Derek Peacock & Andrei Cruceru
     /// </authors>
+    
+    public enum GameState
+    {
+        STARTING,
+        PLAYING,
+        WON,
+        LOST
+    }
     public class App05Game : Game
     {
         #region Constants
@@ -37,20 +45,19 @@ namespace App05MonoGame
         private SpriteFont calibriFont;
 
         private Texture2D backgroundImage;
-        private SoundEffect flameEffect;
 
         private readonly CoinsController coinsController;
-
-        private PlayerSprite shipSprite;
-        private Sprite asteroidSprite;
 
         private AnimatedPlayer playerSprite;
         private AnimatedSprite enemySprite;
 
         private Button restartButton;
+        private Button quitButton;
+
+        private GameState gameState;
+        public EnemyController enemyController;
 
         private int score;
-        private int health;
 
         #endregion
 
@@ -59,6 +66,7 @@ namespace App05MonoGame
             graphicsManager = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+            enemyController = new EnemyController();
 
             coinsController = new CoinsController();
         }
@@ -76,8 +84,7 @@ namespace App05MonoGame
 
             graphicsDevice = graphicsManager.GraphicsDevice;
 
-            score = 0;
-            health = 100;
+            score = 10;
 
             base.Initialize();
         }
@@ -96,7 +103,6 @@ namespace App05MonoGame
 
             SoundController.LoadContent(Content);
             ///MUSICSoundController.PlaySong("Adventure");
-            flameEffect = SoundController.GetSoundEffect("Flame");
 
             // Load Fonts
 
@@ -113,11 +119,6 @@ namespace App05MonoGame
 
             restartButton.click += RestartButton_click;
 
-            // suitable for asteroids type game
-
-            SetupSpaceShip();
-            SetupAsteroid();
-
             // animated sprites suitable for pacman type game
 
             SetupAnimatedPlayer();
@@ -133,45 +134,6 @@ namespace App05MonoGame
             
             Exit();
         }
-
-        /// <summary>
-        /// This is a single image sprite that rotates
-        /// and move at a constant speed in a fixed direction
-        /// </summary>
-        private void SetupAsteroid()
-        {
-            Texture2D asteroid = Content.Load<Texture2D>(
-               "Actors/Stones2Filled_01");
-
-            asteroidSprite = new Sprite(asteroid, 1200, 500)
-            {
-                Direction = new Vector2(-1, 0),
-                Speed = 100,
-
-                Rotation = MathHelper.ToRadians(3),
-                RotationSpeed = 2f,
-            };
-
-    }
-
-        /// <summary>
-        /// This is a Sprite that can be controlled by a
-        /// player using Rotate Left = A, Rotate Right = D, 
-        /// Forward = Space
-        /// </summary>
-        private void SetupSpaceShip()
-        {
-            Texture2D ship = Content.Load<Texture2D>(
-               "Actors/GreenShip");
-
-            shipSprite = new PlayerSprite(ship, 200, 500)
-            {
-                Direction = new Vector2(1, 0),
-                Speed = 200,
-                DirectionControl = DirectionControl.Rotational
-            };
-    }
-
 
         /// <summary>
         /// This is a Sprite with four animations for the four
@@ -208,63 +170,29 @@ namespace App05MonoGame
         /// </summary>
         private void SetupEnemy()
         {
-            Texture2D sheet4x3 = Content.Load<Texture2D>("Actors/rsc-sprite-sheet3");
-
-            AnimationController manager = new AnimationController(graphicsDevice, sheet4x3, 4, 3);
-
-            string[] keys = new string[] { "Down", "Left", "Right", "Up" };
-
-            manager.CreateAnimationGroup(keys);
-
-            enemySprite = new AnimatedSprite()
-            {
-                Scale = 2.0f,
-
-                Position = new Vector2(1000, 200),
-                Direction = new Vector2(-1, 0),
-                Speed = 50,
-
-                Rotation = MathHelper.ToRadians(0),
-            };
-
-            manager.AppendAnimationsTo(enemySprite);
-            enemySprite.PlayAnimation("Left");
+            Texture2D enemySheet = Content.Load<Texture2D>("Actors/rsc-sprite-sheet3");
+            enemySprite = enemyController.CreateEnemy(graphicsDevice, enemySheet);
+            enemyController.Player = playerSprite; 
         }
-
 
         /// <summary>
         /// Called 60 frames/per second and updates the positions
         /// of all the drawable objects
         /// </summary>
-        /// <param name="gameTime">
         /// Can work out the elapsed time since last call if
         /// you want to compensate for different frame rates
         /// </param>
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || 
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
                 Keyboard.GetState().IsKeyDown(Keys.Escape)) Exit();
 
             restartButton.Update(gameTime);
 
-            // Update Asteroids
-
-            shipSprite.Update(gameTime);
-            asteroidSprite.Update(gameTime);
-
-            if (shipSprite.HasCollided(asteroidSprite) && shipSprite.IsAlive)
-            {
-                flameEffect.Play();
-
-                shipSprite.IsActive = false;
-                shipSprite.IsAlive = false;
-                shipSprite.IsVisible = false;
-            }
-
             // Update Chase Game
 
             playerSprite.Update(gameTime);
-            enemySprite.Update(gameTime);
+            enemyController.Update(gameTime);
 
             if (playerSprite.HasCollided(enemySprite))
             {
@@ -294,11 +222,6 @@ namespace App05MonoGame
 
             restartButton.Draw(spriteBatch);
 
-            // Draw asteroids game
-
-            shipSprite.Draw(spriteBatch);
-            asteroidSprite.Draw(spriteBatch);
-
             // Draw Chase game
 
             playerSprite.Draw(spriteBatch);
@@ -313,7 +236,7 @@ namespace App05MonoGame
         }
 
         /// <summary>
-        /// Display the name fo the game and the current score
+        /// Display the name of the game and the current score
         /// and health of the player at the top of the screen
         /// </summary>
         public void DrawGameStatus(SpriteBatch spriteBatch)
@@ -327,12 +250,6 @@ namespace App05MonoGame
             Vector2 gameSize = arialFont.MeasureString(game);
             Vector2 topCentre = new Vector2((HD_Width/2 - gameSize.X/2), 4);
             spriteBatch.DrawString(arialFont, game, topCentre, Color.White);
-
-            string healthText = $"Health = {health}%";
-            Vector2 healthSize = arialFont.MeasureString(healthText);
-            Vector2 topRight = new Vector2(HD_Width - (healthSize.X + 4), 4);
-            spriteBatch.DrawString(arialFont, healthText, topRight, Color.White);
-
         }
 
         /// <summary>
@@ -343,7 +260,7 @@ namespace App05MonoGame
         {
             int margin = 20;
 
-            string names = "Mauro Nunes";
+            string names = "Derek and Andrei - Modifiied by Mauro Nunes";
             string app = "App05: MonoGame";
             string module = "BNU CO453-2020";
 
@@ -357,7 +274,6 @@ namespace App05MonoGame
             spriteBatch.DrawString(calibriFont, names, bottomCentre, Color.Yellow);
             spriteBatch.DrawString(calibriFont, module, bottomLeft, Color.Yellow);
             spriteBatch.DrawString(calibriFont, app, bottomRight, Color.Yellow);
-
         }
     }
 }

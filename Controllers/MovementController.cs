@@ -30,7 +30,7 @@ namespace App05MonoGame.Controllers
         public Vector2 ChangeDirection(KeyboardState keyState)
         {
             Vector2 Direction = Vector2.Zero;
-
+            
             if (keyState.IsKeyDown(InputKeys.Right))
             {
                 Direction = new Vector2(1, 0);

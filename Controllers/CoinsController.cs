@@ -1,7 +1,9 @@
-﻿using App05MonoGame.Models;
+﻿using App05MonoGame.Helpers;
+using App05MonoGame.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 
 
@@ -20,17 +22,23 @@ namespace App05MonoGame.Controllers
     /// collisions with the player sprite
     /// </summary>
     /// <authors>
-    /// Derek Peacock & Andrei Cruceru
+    /// Mauro Nunes
     /// </authors>
     public class CoinsController
     {
         private SoundEffect coinEffect;
+        private int coinValue;
+        private double maxTime;
+        private double timer;
+        private AnimatedSprite spriteCoinTemplate;
 
         private readonly List<AnimatedSprite> Coins;        
 
         public CoinsController()
         {
             Coins = new List<AnimatedSprite>();
+            maxTime = 5.0;
+            timer = maxTime;
         }
         /// <summary>
         /// Create an animated sprite of a copper coin
@@ -39,6 +47,7 @@ namespace App05MonoGame.Controllers
         public void CreateCoin(GraphicsDevice graphics, Texture2D coinSheet)
         {
             coinEffect = SoundController.GetSoundEffect("Coin");
+            coinValue = (int)CoinColours.copper;
             Animation animation = new Animation("coin", coinSheet, 8);
 
             AnimatedSprite coin = new AnimatedSprite()
@@ -50,10 +59,12 @@ namespace App05MonoGame.Controllers
                 Speed = 0,
             };
 
+            spriteCoinTemplate = coin;
+
             Coins.Add(coin);
         }
 
-        public void HasCollided(AnimatedPlayer player)
+        public int HasCollided(AnimatedPlayer player)
         {
             foreach (AnimatedSprite coin in Coins)
             {
@@ -64,12 +75,36 @@ namespace App05MonoGame.Controllers
                     coin.IsActive = false;
                     coin.IsAlive = false;
                     coin.IsVisible = false;
+
+                    return coinValue;
                 }
-            }           
+            }
+
+            return 0;
         }
 
         public void Update(GameTime gameTime)
         {
+            timer -= gameTime.ElapsedGameTime.TotalSeconds;
+            
+            if (timer <= 0)
+            {
+                int x = RandomNumber.Generator.Next(1000) + 100;
+                int y = RandomNumber.Generator.Next(500) + 100;
+
+                AnimatedSprite coin = new AnimatedSprite()
+                {
+                    Animation = spriteCoinTemplate.Animation,
+                    Image = spriteCoinTemplate.Image,
+                    Scale = spriteCoinTemplate.Scale,
+                    Position = new Vector2(x, y),
+                    Speed = 0,
+                };
+
+                Coins.Add(coin);
+                timer = maxTime;
+            }
+
             foreach(AnimatedSprite coin in Coins)
             {
                 coin.Update(gameTime);
