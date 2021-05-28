@@ -57,7 +57,7 @@ namespace App05MonoGame
         private GameState gameState;
         public EnemyController enemyController;
 
-        private int score;
+        public int score;
 
         #endregion
 
@@ -69,6 +69,7 @@ namespace App05MonoGame
             enemyController = new EnemyController();
 
             coinsController = new CoinsController();
+            score = 0;
         }
 
         /// <summary>
@@ -84,7 +85,7 @@ namespace App05MonoGame
 
             graphicsDevice = graphicsManager.GraphicsDevice;
 
-            score = 10;
+            score = 0;
 
             base.Initialize();
         }

@@ -31,8 +31,7 @@ namespace App05MonoGame.Controllers
         private double maxTime;
         private double timer;
         private AnimatedSprite spriteCoinTemplate;
-
-        private readonly List<AnimatedSprite> Coins;        
+        private readonly List<AnimatedSprite> Coins;
 
         public CoinsController()
         {
