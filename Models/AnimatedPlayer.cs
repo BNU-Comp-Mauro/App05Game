@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using App05MonoGame.Controllers;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace App05MonoGame.Models
 {
@@ -11,17 +12,25 @@ namespace App05MonoGame.Models
     /// </summary>
     /// <authors>
     /// Derek Peacock & Andrei Cruceru
+    /// Modified by Mauro Nunes (27/05/2021)
     /// </authors>
     public class AnimatedPlayer : AnimatedSprite
     {
         public bool CanWalk { get; set; }
 
+        public int Score { get; set; }
+
+        public int Health { get; set; }
+
         private readonly MovementController movement;
+        private KeyboardState PreviousKey;
+        private KeyboardState CurrentKey;
 
         public AnimatedPlayer() : base()
         {
             CanWalk = false;
             movement = new MovementController();
+            Score = 0;
         }
 
         /// <summary>
@@ -31,11 +40,12 @@ namespace App05MonoGame.Models
         /// </summary>
         public override void Update(GameTime gameTime)
         {
-            KeyboardState keyState = Keyboard.GetState();
+            PreviousKey = CurrentKey;
+            CurrentKey = Keyboard.GetState();
 
             IsActive = false;
 
-            Vector2 newDirection = movement.ChangeDirection(keyState);
+            Vector2 newDirection = movement.ChangeDirection(CurrentKey);
 
             if (newDirection != Vector2.Zero)
             {

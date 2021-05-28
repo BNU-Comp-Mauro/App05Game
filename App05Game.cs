@@ -4,21 +4,13 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 
 namespace App05MonoGame
 {
     /// <summary>
-    /// This game creates a variety of sprites as an example.  
-    /// There is no game to play yet. The spaceShip and the 
-    /// asteroid can be used for a space shooting game, the player, 
-    /// the coin and the enemy could be used for a pacman
-    /// style game where the player moves around collecting
-    /// random coins and the enemy tries to catch the player.
+    /// Different states for the game.
     /// </summary>
-    /// <authors>
-    /// Derek Peacock & Andrei Cruceru
-    /// </authors>
-    
     public enum GameState
     {
         STARTING,
@@ -26,12 +18,28 @@ namespace App05MonoGame
         WON,
         LOST
     }
+
+    /// <summary>
+    /// This simple game has a similar style to Pac-Man
+    /// where the player moves around collecting
+    /// randomly spawned coins, while trying 
+    /// to avoid enemies intending to harm them
+    /// by not going into their field of vision.
+    /// The player can also fire projectiles
+    /// at the enemies to defeat them.
+    /// </summary>
+    /// <authors>
+    /// Derek Peacock & Andrei Cruceru
+    /// Modified by Mauro Nunes (27/05/2021)
+    /// </authors>
     public class App05Game : Game
     {
         #region Constants
 
         public const int HD_Height = 720;
         public const int HD_Width = 1280;
+        public const int MAX_SCORE = 800;
+        public const int NO_SCORE = 0;
 
         #endregion
 
@@ -47,6 +55,8 @@ namespace App05MonoGame
         private Texture2D backgroundImage;
 
         private readonly CoinsController coinsController;
+        private readonly PlayerController playerController;
+        private readonly EnemyController enemyController;
 
         private AnimatedPlayer playerSprite;
         private AnimatedSprite enemySprite;
@@ -55,21 +65,24 @@ namespace App05MonoGame
         private Button quitButton;
 
         private GameState gameState;
-        public EnemyController enemyController;
 
-        public int score;
+        public EventHandler RestartButton_click { get; private set; }
 
         #endregion
 
+        /// <summary>
+        /// Setup the game window size to 720P 1280 x 720 pixels
+        /// Simple fixed playing area with no camera or scrolling
+        /// </summary>
         public App05Game()
         {
             graphicsManager = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            enemyController = new EnemyController();
 
             coinsController = new CoinsController();
-            score = 0;
+            playerController = new PlayerController();
+            enemyController = new EnemyController();
         }
 
         /// <summary>
@@ -85,14 +98,13 @@ namespace App05MonoGame
 
             graphicsDevice = graphicsManager.GraphicsDevice;
 
-            score = 0;
+            gameState = GameState.STARTING;
 
             base.Initialize();
         }
 
         /// <summary>
-        /// use Content to load your game images, fonts,
-        /// music and sound effects
+        /// Use Content to load your game images, fonts.
         /// </summary>
         protected override void LoadContent()
         {
@@ -100,17 +112,42 @@ namespace App05MonoGame
             backgroundImage = Content.Load<Texture2D>(
                 "backgrounds/green_background720p");
 
-            // Load Music and SoundEffects
+            // Load Content
 
             SoundController.LoadContent(Content);
-            ///MUSICSoundController.PlaySong("Adventure");
 
             // Load Fonts
 
             arialFont = Content.Load<SpriteFont>("fonts/arial");
             calibriFont = Content.Load<SpriteFont>("fonts/calibri");
 
+            // Load buttons, player and enemy sprites
+
+            SetupButtons();
+            SetupAnimatedPlayer();
+            SetupEnemy();
+
+            Texture2D coinSheet = Content.Load<Texture2D>("Actors/coin_copper");
+            coinsController.CreateCoin(graphicsDevice, coinSheet);
+        }
+    
+        /// <summary>
+        /// Sets up the restart and quit buttons on the game's
+        /// user interface.
+        /// </summary>
+        private void SetupButtons()
+        {
             restartButton = new Button(arialFont,
+                Content.Load<Texture2D>("Controls/button-icon-png-200"))
+            {
+                Position = new Vector2(900, 600),
+                Text = "Restart",
+                Scale = 0.6f
+            };
+
+            restartButton.click += RestartButton_click;
+
+            quitButton = new Button(arialFont,
                 Content.Load<Texture2D>("Controls/button-icon-png-200"))
             {
                 Position = new Vector2(1100, 600),
@@ -118,21 +155,15 @@ namespace App05MonoGame
                 Scale = 0.6f
             };
 
-            restartButton.click += RestartButton_click;
-
-            // animated sprites suitable for pacman type game
-
-            SetupAnimatedPlayer();
-            SetupEnemy();
-
-            Texture2D coinSheet = Content.Load<Texture2D>("Actors/coin_copper");
-            coinsController.CreateCoin(graphicsDevice, coinSheet);
+            quitButton.click += QuitButton_click;
         }
 
-        private void RestartButton_click(object sender, System.EventArgs e)
+        /// <summary>
+        /// Exits the game when the Quit button in the game
+        /// is clicked.
+        /// </summary>
+        private void QuitButton_click(object sender, System.EventArgs e)
         {
-            //TODO: do something when the button is clicked!
-            
             Exit();
         }
 
@@ -142,38 +173,33 @@ namespace App05MonoGame
         /// </summary>
         private void SetupAnimatedPlayer()
         {
-            Texture2D sheet4x3 = Content.Load<Texture2D>("Actors/rsc-sprite-sheet1");
+            Texture2D playerSheet = Content.Load<Texture2D>
+                ("Actors/rsc-sprite-sheet1");
 
-            AnimationController contoller = new AnimationController(graphicsDevice, sheet4x3, 4, 3);
+            playerSprite = playerController.CreatePlayer
+                (graphicsDevice, playerSheet);
 
-            string[] keys = new string[] { "Down", "Left", "Right", "Up" };
-            contoller.CreateAnimationGroup(keys);
 
-            playerSprite = new AnimatedPlayer()
-            {
-                CanWalk = true,
-                Scale = 2.0f,
-
-                Position = new Vector2(200, 200),
-                Speed = 200,
-                Direction = new Vector2(1, 0),
-
-                Rotation = MathHelper.ToRadians(0),
-                RotationSpeed = 0f
-            };
-
-            contoller.AppendAnimationsTo(playerSprite);
+            playerSprite.Boundary = new Rectangle(0, 0, HD_Width, HD_Height);
         }
 
         /// <summary>
         /// This is an enemy Sprite with four animations for the four
-        /// directions, up, down, left and right.  Has no intelligence!
+        /// directions, up, down, left and right. Walks around in
+        /// random directions and will chase the player if they
+        /// enter their field of view.
         /// </summary>
         private void SetupEnemy()
         {
-            Texture2D enemySheet = Content.Load<Texture2D>("Actors/rsc-sprite-sheet3");
-            enemySprite = enemyController.CreateEnemy(graphicsDevice, enemySheet);
-            enemyController.Player = playerSprite; 
+            Texture2D enemySheet = Content.Load<Texture2D>
+                ("Actors/rsc-sprite-sheet3");
+
+            enemySprite = enemyController.CreateEnemy
+                (graphicsDevice, enemySheet);
+
+            enemyController.Player = playerSprite;
+
+            enemySprite.Boundary = new Rectangle(0, 0, HD_Width, HD_Height);
         }
 
         /// <summary>
@@ -185,26 +211,27 @@ namespace App05MonoGame
         /// </param>
         protected override void Update(GameTime gameTime)
         {
+            gameState = GameState.PLAYING;
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
                 Keyboard.GetState().IsKeyDown(Keys.Escape)) Exit();
 
             restartButton.Update(gameTime);
-
-            // Update Chase Game
+            quitButton.Update(gameTime);
 
             playerSprite.Update(gameTime);
             enemyController.Update(gameTime);
-
-            if (playerSprite.HasCollided(enemySprite))
-            {
-                playerSprite.IsActive = false;
-                playerSprite.IsAlive = false;
-                enemySprite.IsActive = false;
-            }
+            enemyController.HasCollided(playerSprite);
 
             coinsController.Update(gameTime);
-            coinsController.HasCollided(playerSprite);
+            playerSprite.Score += coinsController.HasCollided(playerSprite);
 
+            // Player wins the game if their score is over 800.
+            if (playerSprite.Score >= MAX_SCORE)
+            {
+                gameState = GameState.WON;
+                enemyController.RemoveEnemy();
+            }
             base.Update(gameTime);
         }
 
@@ -218,12 +245,10 @@ namespace App05MonoGame
 
             spriteBatch.Begin();
 
-
             spriteBatch.Draw(backgroundImage, Vector2.Zero, Color.White);
 
             restartButton.Draw(spriteBatch);
-
-            // Draw Chase game
+            quitButton.Draw(spriteBatch);
 
             playerSprite.Draw(spriteBatch);
             coinsController.Draw(spriteBatch);
@@ -232,24 +257,33 @@ namespace App05MonoGame
             DrawGameStatus(spriteBatch);
             DrawGameFooter(spriteBatch);
 
+            if (gameState == GameState.WON)
+            {
+                DrawGameWinMessage(spriteBatch);
+            }
+            else if (gameState == GameState.LOST)
+            {
+                DrawGameLoseMessage(spriteBatch);
+            }
+
             spriteBatch.End();
             base.Draw(gameTime);
         }
 
         /// <summary>
-        /// Display the name of the game and the current score
+        /// Display the name fo the game and the current score
         /// and health of the player at the top of the screen
         /// </summary>
         public void DrawGameStatus(SpriteBatch spriteBatch)
         {
             Vector2 topLeft = new Vector2(4, 4);
-            string status = $"Score = {score:##0}";
+            string status = $"Score = {playerSprite.Score:##0}";
 
             spriteBatch.DrawString(arialFont, status, topLeft, Color.White);
 
             string game = "Coin Chase";
             Vector2 gameSize = arialFont.MeasureString(game);
-            Vector2 topCentre = new Vector2((HD_Width/2 - gameSize.X/2), 4);
+            Vector2 topCentre = new Vector2((HD_Width / 2 - gameSize.X / 2), 4);
             spriteBatch.DrawString(arialFont, game, topCentre, Color.White);
         }
 
@@ -261,20 +295,63 @@ namespace App05MonoGame
         {
             int margin = 20;
 
-            string names = "Derek and Andrei - Modifiied by Mauro Nunes";
-            string app = "App05: MonoGame";
+            string names = "Derek & Andrei. Modified by Mauro";
+            string app = "App05: RPG Game";
             string module = "BNU CO453-2020";
 
             Vector2 namesSize = calibriFont.MeasureString(names);
             Vector2 appSize = calibriFont.MeasureString(app);
 
-            Vector2 bottomCentre = new Vector2((HD_Width - namesSize.X)/ 2, HD_Height - margin);
+            Vector2 bottomCentre = new Vector2((HD_Width - namesSize.X) / 2, HD_Height - margin);
             Vector2 bottomLeft = new Vector2(margin, HD_Height - margin);
             Vector2 bottomRight = new Vector2(HD_Width - appSize.X - margin, HD_Height - margin);
 
             spriteBatch.DrawString(calibriFont, names, bottomCentre, Color.Yellow);
             spriteBatch.DrawString(calibriFont, module, bottomLeft, Color.Yellow);
             spriteBatch.DrawString(calibriFont, app, bottomRight, Color.Yellow);
+        }
+
+        /// <summary>
+        /// Display a congratulatory message to the player saying
+        /// that they've won the game (score is over 800) and
+        /// end.
+        /// </summary>
+        public void DrawGameWinMessage(SpriteBatch spriteBatch)
+        {
+            string winMsg = "Congratulations! You won!";
+            string exit = "Press ESC to exit. See you soon!";
+
+            Vector2 winMsgSize = arialFont.MeasureString(winMsg);
+            Vector2 exitSize = arialFont.MeasureString(exit);
+
+            Vector2 centre = new Vector2((HD_Width - winMsgSize.X) / 2,
+                (HD_Height - winMsgSize.Y) / 3);
+            Vector2 lowerCentre = new Vector2((HD_Width - exitSize.X) / 2,
+                (HD_Height - exitSize.Y) / 2);
+
+            spriteBatch.DrawString(arialFont, winMsg, centre, Color.White);
+            spriteBatch.DrawString(arialFont, exit, lowerCentre, Color.White);
+        }
+
+        /// <summary>
+        /// Display a message to the player saying that they've lost
+        /// the game (health has dropped to 0) and end.
+        /// </summary>
+        public void DrawGameLoseMessage(SpriteBatch spriteBatch)
+        {
+            string loseMsg = "You have lost the game. Better luck next time!";
+            string exit = "Press the ESC key to exit the game.";
+
+            Vector2 loseMsgSize = arialFont.MeasureString(loseMsg);
+            Vector2 exitSize = arialFont.MeasureString(exit);
+
+            Vector2 centre = new Vector2((HD_Width - loseMsgSize.X) / 2,
+                (HD_Height - loseMsgSize.Y) / 3);
+            Vector2 lowerCentre = new Vector2((HD_Width - exitSize.X) / 2,
+                (HD_Height - exitSize.Y) / 2);
+
+            spriteBatch.DrawString(arialFont, loseMsg, centre, Color.White);
+            spriteBatch.DrawString(arialFont, exit, lowerCentre, Color.White);
         }
     }
 }
